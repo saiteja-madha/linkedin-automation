@@ -25,9 +25,9 @@ async function init() {
         title: config.keyword,
         location: config.location,
         easyApply: true,
-        workLocation: "REMOTE",
-        jobType: "FULL_TIME",
-        experienceLevel: "EXPERIENCED",
+        workLocation: config.workLocation,
+        jobType: config.jobType,
+        experienceLevel: config.experienceLevel,
     });
 }
 

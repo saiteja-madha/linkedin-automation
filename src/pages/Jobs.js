@@ -73,7 +73,7 @@ class JobsPage extends BasePage {
 
         for (let i = 1; i <= li.length; i++) {
             // wait and click i'th element
-            await this.buttonClick(
+            await this.targetClick(
                 `.jobs-search-results-list > ul.scaffold-layout__list-container > li:nth-child(${i})`
             );
 

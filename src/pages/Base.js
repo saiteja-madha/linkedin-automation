@@ -16,17 +16,22 @@ class BasePage {
 
     async findTargetAndType(target, value) {
         if (!this.page) return;
-        const e = await this.page.$(target).catch((ex) => {});
-        if (e)
-            await e.type(value, {
+        await this.page.waitForSelector(target);
+        const el = await this.page.$(target).catch((ex) => {});
+        if (el) {
+            await el.type(value, {
                 delay: 10,
             });
+        }
     }
 
-    async buttonClick(selector) {
+    async targetClick(selector) {
+        if (!this.page) return;
         await this.page.waitForSelector(selector);
-        const buttonClick = await this.page.$(selector);
-        await buttonClick.click();
+        const buttonClick = await this.page.$(selector).catch((ex) => {});
+        if (buttonClick) {
+            await buttonClick.click();
+        }
     }
 }
 
