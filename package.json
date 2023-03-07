@@ -1,0 +1,29 @@
+{
+    "name": "linkedin-automation",
+    "version": "1.0.0",
+    "description": "",
+    "main": "src/index.js",
+    "type": "module",
+    "author": "Sai Teja M",
+    "license": "MIT",
+    "scripts": {
+        "start": "node ."
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/saiteja-madha/linkedin-automation.git"
+    },
+    "keywords": [
+        "linkedin",
+        "automation",
+        "puppeteer"
+    ],
+    "dependencies": {
+        "puppeteer": "^19.7.2"
+    },
+    "prettier": {
+        "tabWidth": 4,
+        "useTabs": false,
+        "printWidth": 100
+    }
+}
