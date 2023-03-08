@@ -64,27 +64,113 @@ class JobsPage extends BasePage {
         const count = await this.page.evaluate((el) => el.innerText, el);
 
         // log results
-        console.log(`Job count: ${count}`);
+        return count;
+    }
 
+    async apply() {
         const ul = await this.page.$(
             ".jobs-search-results-list > ul.scaffold-layout__list-container"
         );
-        const li = await ul.$$("li");
 
-        for (let i = 1; i <= li.length; i++) {
+        const pageJobs = await ul.$$("li");
+        for (let i = 1; i <= pageJobs.length; i++) {
             // wait and click i'th element
             await this.targetClick(
                 `.jobs-search-results-list > ul.scaffold-layout__list-container > li:nth-child(${i})`
             );
 
             await this.wait(5000);
-            await this.parseJobDetails();
-        }
 
-        console.log("Test");
+            // Log job details
+            this.#parseJobDetails().catch((err) => console.log(err));
+
+            // Apply
+            await this.#easyApply();
+        }
     }
 
-    async parseJobDetails() {
+    async #easyApply() {
+        // EasyApply button
+        const btn = await this.page.$("div.jobs-details__main-content button.jobs-apply-button");
+        if (!btn) return console.log("No Easy Apply button found");
+        await btn.click();
+
+        await this.wait(5000);
+
+        // track progress
+        const progressEl = await this.page.$(
+            ".jobs-easy-apply-content progress.artdeco-completeness-meter-linear__progress-element"
+        );
+
+        let fillAttempts = 0;
+        let progress = await this.page.evaluate((el) => el.value, progressEl);
+        while (progress < 100) {
+            await this.wait(5000);
+
+            let button = null;
+
+            // next button
+            button = await this.page.$(
+                '.jobs-easy-apply-content footer button[aria-label="Continue to next step"]'
+            );
+
+            // review button
+            if (!button) {
+                button = await this.page.$(
+                    '.jobs-easy-apply-content footer button[aria-label="Review your application"]'
+                );
+            }
+
+            if (!button) {
+                console.error("ERROR: No button found");
+                return;
+            }
+
+            await button.click();
+            await this.wait(2000);
+            const newProgress = await this.page.evaluate((el) => el.value, progressEl);
+            if (newProgress === progress) {
+                if (fillAttempts > 3) {
+                    console.error("ERROR: Failed to fill details");
+                    return;
+                }
+                fillAttempts++;
+                console.log(`Attempting to fill the form. Attempt #${fillAttempts}/3`);
+                await this.#tryFillDetails();
+            }
+
+            progress = newProgress;
+        }
+
+        // Submit button
+        await this.wait(5000);
+        const submitBtn = await this.page.$(
+            '.jobs-easy-apply-content footer button[aria-label="Submit application"]'
+        );
+        if (submitBtn) {
+            await submitBtn.click();
+        }
+    }
+
+    async #tryFillDetails() {
+        const divEls = await this.page.$$(
+            ".jobs-easy-apply-content div.jobs-easy-apply-form-section__grouping"
+        );
+
+        for (let i = 0; i < divEls.length; i++) {
+            const qEl = divEls[i];
+            const quesText = await qEl.evaluate((el) => el.innerText);
+            console.log("Question: ", quesText);
+
+            // TODO: Answer questions automatically
+        }
+
+        // TODO: This is a temporary solution
+        console.log("Please fill the details manually");
+        await this.wait(divEls.length * 10000); // wait for 10 seconds per question
+    }
+
+    async #parseJobDetails() {
         let sel = ".jobs-details__main-content .jobs-unified-top-card";
         const title = await this.page.$eval(
             `${sel} .jobs-unified-top-card__job-title`,

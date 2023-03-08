@@ -21,7 +21,7 @@ async function init() {
     await loginPage.login();
 
     const jobs = new JobsPage(browser, initialPage);
-    await jobs.applyFilters({
+    const count = await jobs.applyFilters({
         title: config.keyword,
         location: config.location,
         easyApply: true,
@@ -29,6 +29,9 @@ async function init() {
         jobType: config.jobType,
         experienceLevel: config.experienceLevel,
     });
+
+    console.log(`Job count: ${count}`);
+    jobs.apply();
 }
 
 init();
