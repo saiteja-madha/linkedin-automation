@@ -23,6 +23,7 @@ class LoginPage extends BasePage {
     }
 
     async login() {
+        if (!this.page.url().includes("login")) return;
         await this.findTargetAndType('[name="session_key"]', config.email);
         await this.findTargetAndType('[name="session_password"]', config.password);
         await this.wait(1000);
