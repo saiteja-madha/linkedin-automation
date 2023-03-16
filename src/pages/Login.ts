@@ -1,17 +1,12 @@
-import BasePage from "./Base.js";
+import { Browser, Page } from "puppeteer";
+import BasePage from "./Base";
 import config from "../../config.js";
 
 class LoginPage extends BasePage {
     #path = "/login";
 
-    /**
-     * @param {import('puppeteer').Browser} browser
-     * @param {import('puppeteer').Page} page
-     */
-    constructor(browser, page = null) {
+    constructor(browser: Browser, page: Page) {
         super(browser, page);
-        this.browser = browser;
-        this.page = page;
     }
 
     async open() {

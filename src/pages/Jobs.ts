@@ -1,15 +1,12 @@
-import BasePage from "./Base.js";
+import { Browser, ElementHandle, Page } from "puppeteer";
+import BasePage from "./Base";
+import { JobFilter } from "../../typings/index";
 
 class JobsPage extends BasePage {
     #path = "/jobs/search";
 
-    /**
-     * @param {import('puppeteer').Browser} browser
-     * @param {import('puppeteer').Page} page
-     */
-    constructor(browser, page = null) {
+    constructor(browser: Browser, page: Page) {
         super(browser, page);
-        this.browser = browser;
     }
 
     async open() {
@@ -19,19 +16,19 @@ class JobsPage extends BasePage {
         await this.page.goto(this.baseUrl + this.#path);
     }
 
-    async applyFilters(filters = {}) {
+    async applyFilters(filters: JobFilter) {
         const { title, location, easyApply, workLocation, jobType, experienceLevel } = filters;
         let url = this.baseUrl + this.#path;
 
         const params = new URLSearchParams();
         if (title) params.append("keywords", title);
         if (location) params.append("location", location);
-        if (easyApply) params.append("f_AL", true);
+        if (easyApply) params.append("f_AL", "true");
 
         if (workLocation) {
-            if (workLocation === "ON_SITE") params.append("f_WT", 1);
-            else if (workLocation === "REMOTE") params.append("f_WT", 2);
-            else if (workLocation === "HYBRID") params.append("f_WT", 3);
+            if (workLocation === "ON_SITE") params.append("f_WT", "1");
+            else if (workLocation === "REMOTE") params.append("f_WT", "2");
+            else if (workLocation === "HYBRID") params.append("f_WT", "3");
         }
 
         if (jobType) {
@@ -43,12 +40,12 @@ class JobsPage extends BasePage {
         }
 
         if (experienceLevel) {
-            if (experienceLevel === "INTERNSHIP") params.append("f_E", 1);
-            else if (experienceLevel === "ENTRY_LEVEL") params.append("f_E", 2);
-            else if (experienceLevel === "ASSOCIATE") params.append("f_E", 3);
-            else if (experienceLevel === "MID_SENIOR") params.append("f_E", 4);
-            else if (experienceLevel === "DIRECTOR") params.append("f_E", 5);
-            else if (experienceLevel === "EXECUTIVE") params.append("f_E", 6);
+            if (experienceLevel === "INTERNSHIP") params.append("f_E", "1");
+            else if (experienceLevel === "ENTRY_LEVEL") params.append("f_E", "2");
+            else if (experienceLevel === "ASSOCIATE") params.append("f_E", "3");
+            else if (experienceLevel === "MID_SENIOR") params.append("f_E", "4");
+            else if (experienceLevel === "DIRECTOR") params.append("f_E", "5");
+            else if (experienceLevel === "EXECUTIVE") params.append("f_E", "6");
         }
 
         url += "?" + params.toString();
@@ -61,7 +58,7 @@ class JobsPage extends BasePage {
         await this.wait(5000);
 
         // get results
-        const count = await this.page.evaluate((el) => el.innerText, el);
+        const count = await this.page.evaluate((el) => el?.innerText, el);
 
         // log results
         return count;
@@ -71,6 +68,10 @@ class JobsPage extends BasePage {
         const ul = await this.page.$(
             ".jobs-search-results-list > ul.scaffold-layout__list-container"
         );
+
+        if (!ul) {
+            return console.warn("Jobs Results Missing on this page!");
+        }
 
         const pageJobs = await ul.$$("li");
         for (let i = 1; i <= pageJobs.length; i++) {
@@ -103,11 +104,16 @@ class JobsPage extends BasePage {
         );
 
         let fillAttempts = 0;
-        let progress = await this.page.evaluate((el) => el.value, progressEl);
+        let progress = await this.page.evaluate((el) => el?.value, progressEl);
+
+        if (!progress) {
+            return console.warn("No progress element for this job?");
+        }
+
         while (progress < 100) {
             await this.wait(5000);
 
-            let button = null;
+            let button = null as ElementHandle<Element> | null;
 
             // next button
             button = await this.page.$(
@@ -128,7 +134,12 @@ class JobsPage extends BasePage {
 
             await button.click();
             await this.wait(2000);
-            const newProgress = await this.page.evaluate((el) => el.value, progressEl);
+            const newProgress = await this.page.evaluate((el) => el?.value, progressEl);
+            if (!newProgress) {
+                console.error("ERROR: No progress found");
+                return;
+            }
+
             if (newProgress === progress) {
                 if (fillAttempts > 3) {
                     console.error("ERROR: Failed to fill details");
@@ -173,22 +184,22 @@ class JobsPage extends BasePage {
     async #parseJobDetails() {
         let sel = ".jobs-details__main-content .jobs-unified-top-card";
         const title = await this.page.$eval(
-            `${sel} .jobs-unified-top-card__job-title`,
+            `${sel} h2.jobs-unified-top-card__job-title`,
             (el) => el.innerText
         );
 
         const company = await this.page.$eval(
-            `${sel} .jobs-unified-top-card__company-name`,
+            `${sel} span.jobs-unified-top-card__company-name`,
             (el) => el.innerText
         );
 
         const place = await this.page.$eval(
-            `${sel} .jobs-unified-top-card__bullet`,
+            `${sel} span.jobs-unified-top-card__bullet`,
             (el) => el.innerText
         );
 
         const workType = await this.page.$eval(
-            `${sel} .jobs-unified-top-card__workplace-type`,
+            `${sel} span.jobs-unified-top-card__workplace-type`,
             (el) => el.innerText
         );
 

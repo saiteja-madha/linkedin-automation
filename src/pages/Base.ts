@@ -1,23 +1,23 @@
+import { Browser, Page } from "puppeteer";
+
 class BasePage {
     baseUrl = "https://www.linkedin.com";
+    browser: Browser;
+    page: Page;
 
-    /**
-     * @param {import('puppeteer').Browser} browser
-     * @param {import('puppeteer').Page} page
-     */
-    constructor(browser, page) {
+    constructor(browser: Browser, page: Page) {
         this.browser = browser;
         this.page = page;
     }
 
-    async wait(ms) {
+    async wait(ms: number) {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
-    async findTargetAndType(target, value) {
+    async findTargetAndType(target: string, value: string) {
         if (!this.page) return;
         await this.page.waitForSelector(target);
-        const el = await this.page.$(target).catch((ex) => {});
+        const el = await this.page.$(target).catch(() => {});
         if (el) {
             await el.type(value, {
                 delay: 10,
@@ -25,10 +25,10 @@ class BasePage {
         }
     }
 
-    async targetClick(selector) {
+    async targetClick(selector: string) {
         if (!this.page) return;
         await this.page.waitForSelector(selector);
-        const buttonClick = await this.page.$(selector).catch((ex) => {});
+        const buttonClick = await this.page.$(selector).catch(() => {});
         if (buttonClick) {
             await buttonClick.click();
         }

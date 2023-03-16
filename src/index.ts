@@ -1,7 +1,8 @@
 import puppeteer from "puppeteer";
 import config from "./../config.js";
-import JobsPage from "./pages/Jobs.js";
-import LoginPage from "./pages/Login.js";
+import LoginPage from "./pages/Login";
+import JobsPage from "./pages/Jobs";
+import { WorkLocation, JobType, ExperienceLevel } from "../typings/";
 
 async function init() {
     const browser = await puppeteer.launch({
@@ -25,9 +26,9 @@ async function init() {
         title: config.keyword,
         location: config.location,
         easyApply: true,
-        workLocation: config.workLocation,
-        jobType: config.jobType,
-        experienceLevel: config.experienceLevel,
+        workLocation: config.workLocation as WorkLocation,
+        jobType: config.jobType as JobType,
+        experienceLevel: config.experienceLevel as ExperienceLevel,
     });
 
     console.log(`Job count: ${count}`);
