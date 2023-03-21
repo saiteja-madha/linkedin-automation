@@ -13,5 +13,8 @@ node_modules
 # chrome directory
 userData
 
+# Build
+dist
+
 # Secrets
 .env
