@@ -28,9 +28,9 @@ class BasePage {
     async targetClick(selector: string) {
         if (!this.page) return;
         await this.page.waitForSelector(selector);
-        const buttonClick = await this.page.$(selector).catch(() => {});
-        if (buttonClick) {
-            await buttonClick.click();
+        const el = await this.page.$(selector).catch(() => {});
+        if (el) {
+            await el.click();
         }
     }
 }

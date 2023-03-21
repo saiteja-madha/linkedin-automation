@@ -2,11 +2,11 @@
     "name": "linkedin-automation",
     "version": "1.0.0",
     "description": "",
-    "main": "dist/index.js",
+    "main": "build/src/index.js",
     "author": "Sai Teja M",
     "license": "MIT",
     "scripts": {
-        "start": "node .",
+        "start": "npm install && npm run build && node .",
         "dev": "ts-node --files src/index.ts",
         "dev:watch": "nodemon --watch \"src/**\" --ext \"ts,json\" --ignore \"src/**/*.spec.ts\" --exec npm run dev",
         "build": "rimraf ./build && tsc"

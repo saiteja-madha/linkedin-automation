@@ -85,15 +85,28 @@ class JobsPage extends BasePage {
             // Log job details
             this.#parseJobDetails().catch((err) => console.log(err));
 
-            // Apply
-            await this.#easyApply();
+            // Try Apply
+            try {
+                const bool = await this.#easyApply();
+                if (!bool) throw new Error("Failed to apply");
+            } catch (err) {
+                console.log("Failed to apply to this job");
+
+                // Close Easy Apply Modal
+                await this.targetClick(".artdeco-modal__dismiss");
+                await this.wait(2000);
+                await this.targetClick(".artdeco-modal__confirm-dialog-btn:nth-child(1)");
+            }
         }
     }
 
     async #easyApply() {
         // EasyApply button
         const btn = await this.page.$("div.jobs-details__main-content button.jobs-apply-button");
-        if (!btn) return console.log("No Easy Apply button found");
+        if (!btn) {
+            console.error("ERROR: No Easy Apply button found");
+            return false;
+        }
         await btn.click();
 
         await this.wait(5000);
@@ -103,12 +116,13 @@ class JobsPage extends BasePage {
             ".jobs-easy-apply-content progress.artdeco-completeness-meter-linear__progress-element"
         );
 
-        let fillAttempts = 0;
-        let progress = await this.page.evaluate((el) => el?.value, progressEl);
-
-        if (!progress) {
-            return console.warn("No progress element for this job?");
+        if (!progressEl) {
+            console.warn("No progress element for this job?");
+            return false;
         }
+
+        let fillAttempts = 0;
+        let progress = await this.page.evaluate((el) => el.value, progressEl);
 
         while (progress < 100) {
             await this.wait(5000);
@@ -129,7 +143,7 @@ class JobsPage extends BasePage {
 
             if (!button) {
                 console.error("ERROR: No button found");
-                return;
+                return false;
             }
 
             await button.click();
@@ -137,17 +151,19 @@ class JobsPage extends BasePage {
             const newProgress = await this.page.evaluate((el) => el?.value, progressEl);
             if (!newProgress) {
                 console.error("ERROR: No progress found");
-                return;
+                return false;
             }
 
             if (newProgress === progress) {
+                fillAttempts++;
                 if (fillAttempts > 3) {
                     console.error("ERROR: Failed to fill details");
-                    return;
+                    return false;
                 }
-                fillAttempts++;
                 console.log(`Attempting to fill the form. Attempt #${fillAttempts}/3`);
                 await this.#tryFillDetails();
+            } else {
+                fillAttempts = 0;
             }
 
             progress = newProgress;
@@ -161,6 +177,8 @@ class JobsPage extends BasePage {
         if (submitBtn) {
             await submitBtn.click();
         }
+
+        return true;
     }
 
     async #tryFillDetails() {
@@ -177,8 +195,8 @@ class JobsPage extends BasePage {
         }
 
         // TODO: This is a temporary solution
-        console.log("Please fill the details manually");
-        await this.wait(divEls.length * 10000); // wait for 10 seconds per question
+        // Please fill the details manually
+        await this.wait(divEls.length * 5000); // wait for 5 seconds per question
     }
 
     async #parseJobDetails() {

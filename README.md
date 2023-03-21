@@ -7,11 +7,10 @@ LinkedIn Automation is a project that utilizes [Puppeteer](https://pptr.dev/) to
 To get started with this project, you will need to have [Node.js](https://nodejs.org/) installed on your system. Once Node.js is installed, you can clone this repository and run the following commands:
 
 ```bash
-npm install
-npm start
+npm run start
 ```
 
-Before running the `npm start` command, make sure to fill in the necessary details in the `config.js` file. Some of the fields are already filled, but you will need to fill in the following fields:
+Before running the `npm run start` command, make sure to fill in the necessary details in the `config.js` file. Some of the fields are already filled, but you will need to fill in the following fields:
 
 -   email - Your LinkedIn email address
 -   password - Your LinkedIn password
