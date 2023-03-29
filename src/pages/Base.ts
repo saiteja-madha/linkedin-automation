@@ -14,10 +14,10 @@ class BasePage {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
-    async findTargetAndType(target: string, value: string) {
+    async findTargetAndType(selector: string, value: string) {
         if (!this.page) return;
-        await this.page.waitForSelector(target);
-        const el = await this.page.$(target).catch(() => {});
+        await this.page.waitForSelector(selector, { timeout: 5000 }).catch(() => {});
+        const el = await this.page.$(selector).catch(() => {});
         if (el) {
             await el.type(value, {
                 delay: 10,
@@ -27,7 +27,7 @@ class BasePage {
 
     async targetClick(selector: string) {
         if (!this.page) return;
-        await this.page.waitForSelector(selector);
+        await this.page.waitForSelector(selector, { timeout: 5000 }).catch(() => {});
         const el = await this.page.$(selector).catch(() => {});
         if (el) {
             await el.click();

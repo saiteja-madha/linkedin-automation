@@ -83,7 +83,7 @@ class JobsPage extends BasePage {
             await this.wait(5000);
 
             // Log job details
-            this.#parseJobDetails().catch((err) => console.log(err));
+            await this.#parseJobDetails().catch((err) => console.log(err));
 
             // Try Apply
             try {
@@ -117,12 +117,11 @@ class JobsPage extends BasePage {
         );
 
         if (!progressEl) {
-            console.warn("No progress element for this job?");
-            return false;
+            console.log("No progress element found! Considering 100% progress");
         }
 
         let fillAttempts = 0;
-        let progress = await this.page.evaluate((el) => el.value, progressEl);
+        let progress = progressEl ? await progressEl.evaluate((el) => el?.value) : 100;
 
         while (progress < 100) {
             await this.wait(5000);
@@ -182,21 +181,62 @@ class JobsPage extends BasePage {
     }
 
     async #tryFillDetails() {
-        const divEls = await this.page.$$(
+        const pb4 = await this.page.$$(".jobs-easy-apply-content div.pb4");
+
+        if (pb4.length === 0) {
+            console.log("No b4 element found");
+            return;
+        }
+
+        for (const _ in pb4) {
+            try {
+                this.#tryUploadResume();
+            } catch (err) {}
+
+            try {
+                this.#tryFillQuestions();
+            } catch (err) {}
+        }
+    }
+
+    async #tryUploadResume() {}
+
+    async #tryFillQuestions() {
+        const frmEls = await this.page.$$(
             ".jobs-easy-apply-content div.jobs-easy-apply-form-section__grouping"
         );
 
-        for (let i = 0; i < divEls.length; i++) {
-            const qEl = divEls[i];
-            const quesText = await qEl.evaluate((el) => el.innerText);
-            console.log("Question: ", quesText);
+        for (let i = 0; i < frmEls.length; i++) {
+            const el = frmEls[i];
+            try {
+                await this.#tryFillTextBox(el);
+            } catch (err) {
+                console.log("Failed to fill text box", err);
+            }
 
-            // TODO: Answer questions automatically
+            try {
+                await this.#tryFillRadio(el);
+            } catch (err) {
+                console.log("Failed to fill radio", err);
+            }
         }
+    }
 
-        // TODO: This is a temporary solution
-        // Please fill the details manually
-        await this.wait(divEls.length * 5000); // wait for 5 seconds per question
+    async #tryFillTextBox(el: ElementHandle<Element>) {
+        const quesEl = await el.$("label");
+        const txtField = await el.$("input");
+        const txtArea = await el.$("textarea");
+        if (!quesEl || (!txtField && !txtArea)) return;
+        const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase());
+        console.log(ques);
+    }
+
+    async #tryFillRadio(el: ElementHandle<Element>) {
+        const quesEl = await el.$("div.jobs-easy-apply-form-element");
+        const radios = await el.$$(".fb-text-selectable__option");
+        if (!quesEl || radios.length === 0) return;
+        const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase());
+        console.log(ques);
     }
 
     async #parseJobDetails() {
