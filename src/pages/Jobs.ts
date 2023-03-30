@@ -1,6 +1,7 @@
 import { Browser, ElementHandle, Page } from "puppeteer";
 import BasePage from "./Base";
 import { JobFilter } from "../../typings/index";
+import config from "../../config.js";
 
 class JobsPage extends BasePage {
     #path = "/jobs/search";
@@ -145,6 +146,11 @@ class JobsPage extends BasePage {
                 return false;
             }
 
+            // To log questions in test mode
+            if (config.testMode) {
+                await this.#tryFillDetails();
+            }
+
             await button.click();
             await this.wait(2000);
             const newProgress = await this.page.evaluate((el) => el?.value, progressEl);
@@ -174,7 +180,12 @@ class JobsPage extends BasePage {
             '.jobs-easy-apply-content footer button[aria-label="Submit application"]'
         );
         if (submitBtn) {
-            await submitBtn.click();
+            if (config.testMode) {
+                console.log("TEST MODE: Submitted application");
+                return false;
+            } else {
+                await submitBtn.click();
+            }
         }
 
         return true;
@@ -188,23 +199,53 @@ class JobsPage extends BasePage {
             return;
         }
 
-        for (const _ in pb4) {
+        for (let i = 0; i < pb4.length; i++) {
+            const b4 = pb4[i];
             try {
-                this.#tryUploadResume();
+                await this.#tryUploadResume(b4);
             } catch (err) {}
 
             try {
-                this.#tryFillQuestions();
+                await this.#tryFillQuestions(b4);
             } catch (err) {}
         }
     }
 
-    async #tryUploadResume() {}
+    async #tryUploadResume(b4: ElementHandle<HTMLDivElement>) {
+        const input = await b4.$("input[name='file']");
+        if (!input) return;
 
-    async #tryFillQuestions() {
-        const frmEls = await this.page.$$(
-            ".jobs-easy-apply-content div.jobs-easy-apply-form-section__grouping"
-        );
+        const span = await b4.$("span[role='button']");
+        const innerText = await span?.evaluate((el) => el?.innerText.toLowerCase());
+
+        // Resume
+        if (innerText?.includes("resume")) {
+            const checkedResume = await b4.$("input[type='radio']:checked");
+            if (checkedResume) return;
+            const uploadedResumes = await b4.$$("input[type='radio']");
+
+            // Already uploaded
+            if (uploadedResumes.length > 0) {
+                const latestResume = await b4.$("input[type='radio'] + label");
+                if (latestResume) {
+                    await latestResume.click();
+                    return;
+                }
+            }
+
+            // TODO: Upload resume
+            else {
+            }
+        }
+
+        // Cover Letter
+        if (innerText?.includes("cover")) {
+            // TODO: Cover Letter Logic
+        }
+    }
+
+    async #tryFillQuestions(b4: ElementHandle<HTMLDivElement>) {
+        const frmEls = await b4.$$("div.jobs-easy-apply-form-section__grouping");
 
         for (let i = 0; i < frmEls.length; i++) {
             const el = frmEls[i];
@@ -219,6 +260,12 @@ class JobsPage extends BasePage {
             } catch (err) {
                 console.log("Failed to fill radio", err);
             }
+
+            try {
+                await this.#tryFillDropdown(el);
+            } catch (err) {
+                console.log("Failed to fill dropdown", err);
+            }
         }
     }
 
@@ -227,16 +274,26 @@ class JobsPage extends BasePage {
         const txtField = await el.$("input");
         const txtArea = await el.$("textarea");
         if (!quesEl || (!txtField && !txtArea)) return;
-        const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase());
-        console.log(ques);
+        const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase().trim());
+        console.log("TEXT: ", ques);
     }
 
     async #tryFillRadio(el: ElementHandle<Element>) {
         const quesEl = await el.$("div.jobs-easy-apply-form-element");
         const radios = await el.$$(".fb-text-selectable__option");
         if (!quesEl || radios.length === 0) return;
-        const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase());
-        console.log(ques);
+        const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase().trim());
+        console.log("RADIO: ", ques);
+    }
+
+    async #tryFillDropdown(el: ElementHandle<Element>) {
+        const quesEl = await el.$("div.jobs-easy-apply-form-element");
+        const select = await quesEl?.$("select");
+        if (!quesEl || !select) return;
+        const quesLabel = await quesEl.$("label");
+        if (!quesLabel) return;
+        const ques = await quesLabel.evaluate((el) => el.innerText.toLowerCase().trim());
+        console.log("DROPDOWN: ", ques);
     }
 
     async #parseJobDetails() {

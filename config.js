@@ -4,7 +4,7 @@ export default {
     password: "",
 
     // Mandatory Filters
-    keyword: "Summer Intern",
+    keyword: "Software Engineer Intern",
     location: "United States",
 
     // Optional Filters
@@ -13,6 +13,7 @@ export default {
     experienceLevel: "", // INTERNSHIP, ENTRY_LEVEL, ASSOCIATE, MID_SENIOR, DIRECTOR, EXECUTIVE
 
     // Dev Options
+    testMode: true, // don't submit the application, just log
     args: ["--start-maximized", "--disable-notifications"],
     headless: false,
     timeout: 30000,
