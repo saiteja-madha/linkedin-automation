@@ -18,3 +18,17 @@ export type JobFilter = {
     jobType?: JobType;
     experienceLevel?: ExperienceLevel;
 };
+
+export type JobDetails = {
+    jobId: string;
+    title: string;
+    company: string;
+    location: string;
+    workType: string;
+    applicants: string;
+    posted: string;
+};
+
+export type ApplicationStatus = "SUCCESS" | "FAILED";
+
+export type QuestionType = "TEXT" | "RADIO" | "DROPDOWN";

@@ -1,7 +1,8 @@
 import { Browser, ElementHandle, Page } from "puppeteer";
 import BasePage from "./Base";
-import { JobFilter } from "../../typings/index";
+import { type JobFilter } from "../../typings/index";
 import config from "../../config.js";
+import Utils from "../utils";
 
 class JobsPage extends BasePage {
     #path = "/jobs/search";
@@ -84,14 +85,22 @@ class JobsPage extends BasePage {
             await this.wait(5000);
 
             // Log job details
-            await this.#parseJobDetails().catch((err) => console.log(err));
+            const jobDetails = await this.#parseJobDetails().catch((err) => console.log(err));
+            if (!jobDetails) {
+                console.log("Failed to parse job details");
+                continue;
+            }
 
             // Try Apply
             try {
                 const bool = await this.#easyApply();
                 if (!bool) throw new Error("Failed to apply");
+
+                Utils.writeToCSV(jobDetails, "SUCCESS");
             } catch (err) {
                 console.log("Failed to apply to this job");
+
+                Utils.writeToCSV(jobDetails, "FAILED");
 
                 // Close Easy Apply Modal
                 await this.targetClick(".artdeco-modal__dismiss");
@@ -155,6 +164,7 @@ class JobsPage extends BasePage {
             await this.wait(2000);
             const newProgress = await this.page.evaluate((el) => el?.value, progressEl);
             if (!newProgress) {
+                // TODO: Check if this is the last step
                 console.error("ERROR: No progress found");
                 return false;
             }
@@ -270,12 +280,16 @@ class JobsPage extends BasePage {
     }
 
     async #tryFillTextBox(el: ElementHandle<Element>) {
+        // TODO: This logic is not working. Radio box ques are being filled here
         const quesEl = await el.$("label");
         const txtField = await el.$("input");
         const txtArea = await el.$("textarea");
         if (!quesEl || (!txtField && !txtArea)) return;
         const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase().trim());
-        console.log("TEXT: ", ques);
+
+        // TODO: Fill text box
+
+        Utils.recordUnpreparedQuestion("TEXT", ques);
     }
 
     async #tryFillRadio(el: ElementHandle<Element>) {
@@ -283,7 +297,10 @@ class JobsPage extends BasePage {
         const radios = await el.$$(".fb-text-selectable__option");
         if (!quesEl || radios.length === 0) return;
         const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase().trim());
-        console.log("RADIO: ", ques);
+
+        // TODO: Fill radio
+
+        Utils.recordUnpreparedQuestion("RADIO", ques);
     }
 
     async #tryFillDropdown(el: ElementHandle<Element>) {
@@ -293,7 +310,10 @@ class JobsPage extends BasePage {
         const quesLabel = await quesEl.$("label");
         if (!quesLabel) return;
         const ques = await quesLabel.evaluate((el) => el.innerText.toLowerCase().trim());
-        console.log("DROPDOWN: ", ques);
+
+        // TODO: Fill dropdown
+
+        Utils.recordUnpreparedQuestion("DROPDOWN", ques);
     }
 
     async #parseJobDetails() {
@@ -308,7 +328,7 @@ class JobsPage extends BasePage {
             (el) => el.innerText
         );
 
-        const place = await this.page.$eval(
+        const location = await this.page.$eval(
             `${sel} span.jobs-unified-top-card__bullet`,
             (el) => el.innerText
         );
@@ -328,13 +348,18 @@ class JobsPage extends BasePage {
             (el) => el.innerText
         );
 
+        const jobId = this.page.url().split("currentJobId=")[1].split("&")[0];
+
+        // TODO: Style this
         console.log("====================================");
         console.log("Title: ", title);
         console.log("Company: ", company);
-        console.log("Place: ", place);
+        console.log("Location: ", location);
         console.log("Work Type: ", workType);
         console.log("Applicants: ", applicants);
         console.log("Posted: ", posted);
+
+        return { jobId, title, company, location, workType, applicants, posted };
     }
 }
 

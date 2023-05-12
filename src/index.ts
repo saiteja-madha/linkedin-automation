@@ -2,7 +2,7 @@ import puppeteer from "puppeteer";
 import config from "./../config.js";
 import LoginPage from "./pages/Login";
 import JobsPage from "./pages/Jobs";
-import { WorkLocation, JobType, ExperienceLevel } from "../typings/";
+import { type WorkLocation, type JobType, type ExperienceLevel } from "../typings/";
 
 async function init() {
     const browser = await puppeteer.launch({

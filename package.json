@@ -21,6 +21,7 @@
         "puppeteer"
     ],
     "dependencies": {
+        "csv-stringify": "^6.3.3",
         "puppeteer": "^19.7.2"
     },
     "devDependencies": {
