@@ -91,18 +91,24 @@ class JobsPage extends BasePage {
                 continue;
             }
 
+            let closeModal = false;
             // Try Apply
             try {
-                const bool = await this.#easyApply();
-                if (!bool) throw new Error("Failed to apply");
-
+                await this.#easyApply();
+                if (config.testMode) {
+                    closeModal = true; // close modal since we are not actually applying
+                    console.log("[TEST MODE]: Applied to this job");
+                } else {
+                    console.log("Applied to this job");
+                }
                 Utils.writeToCSV(jobDetails, "SUCCESS");
-            } catch (err) {
-                console.log("Failed to apply to this job");
-
+            } catch (err: any) {
+                console.log(`Failed to apply to this job. Reason: ${err.message}`);
                 Utils.writeToCSV(jobDetails, "FAILED");
+                closeModal = true;
+            }
 
-                // Close Easy Apply Modal
+            if (closeModal) {
                 await this.targetClick(".artdeco-modal__dismiss");
                 await this.wait(2000);
                 await this.targetClick(".artdeco-modal__confirm-dialog-btn:nth-child(1)");
@@ -114,8 +120,7 @@ class JobsPage extends BasePage {
         // EasyApply button
         const btn = await this.page.$("div.jobs-details__main-content button.jobs-apply-button");
         if (!btn) {
-            console.error("ERROR: No Easy Apply button found");
-            return false;
+            throw new Error("No Easy Apply button found");
         }
         await btn.click();
 
@@ -151,8 +156,7 @@ class JobsPage extends BasePage {
             }
 
             if (!button) {
-                console.error("ERROR: No button found");
-                return false;
+                throw new Error("No Next/Review button found");
             }
 
             // To log questions in test mode
@@ -165,17 +169,17 @@ class JobsPage extends BasePage {
             const newProgress = await this.page.evaluate((el) => el?.value, progressEl);
             if (!newProgress) {
                 // TODO: Check if this is the last step
-                console.error("ERROR: No progress found");
-                return false;
+                throw new Error("No progress found");
             }
 
             if (newProgress === progress) {
                 fillAttempts++;
-                if (fillAttempts > 3) {
-                    console.error("ERROR: Failed to fill details");
-                    return false;
+                if (fillAttempts > config.fillAttempts) {
+                    throw new Error("Could not fill details");
                 }
-                console.log(`Attempting to fill the form. Attempt #${fillAttempts}/3`);
+                console.log(
+                    `Attempting to fill the form. Attempt #${fillAttempts}/${config.fillAttempts}`
+                );
                 await this.#tryFillDetails();
             } else {
                 fillAttempts = 0;
@@ -184,21 +188,19 @@ class JobsPage extends BasePage {
             progress = newProgress;
         }
 
+        // Don't submit in test mode
+        if (config.testMode) {
+            return;
+        }
+
         // Submit button
         await this.wait(5000);
         const submitBtn = await this.page.$(
             '.jobs-easy-apply-content footer button[aria-label="Submit application"]'
         );
         if (submitBtn) {
-            if (config.testMode) {
-                console.log("TEST MODE: Submitted application");
-                return false;
-            } else {
-                await submitBtn.click();
-            }
+            await submitBtn.click();
         }
-
-        return true;
     }
 
     async #tryFillDetails() {
@@ -256,25 +258,30 @@ class JobsPage extends BasePage {
 
     async #tryFillQuestions(b4: ElementHandle<HTMLDivElement>) {
         const frmEls = await b4.$$("div.jobs-easy-apply-form-section__grouping");
+        let done;
 
         for (let i = 0; i < frmEls.length; i++) {
             const el = frmEls[i];
             try {
-                await this.#tryFillTextBox(el);
-            } catch (err) {
-                console.log("Failed to fill text box", err);
-            }
-
-            try {
-                await this.#tryFillRadio(el);
+                done = await this.#tryFillRadio(el);
             } catch (err) {
                 console.log("Failed to fill radio", err);
             }
 
+            if (done) continue;
+
             try {
-                await this.#tryFillDropdown(el);
+                done = await this.#tryFillDropdown(el);
             } catch (err) {
                 console.log("Failed to fill dropdown", err);
+            }
+
+            if (done) continue;
+
+            try {
+                await this.#tryFillTextBox(el);
+            } catch (err) {
+                console.log("Failed to fill text box", err);
             }
         }
     }
@@ -284,36 +291,39 @@ class JobsPage extends BasePage {
         const quesEl = await el.$("label");
         const txtField = await el.$("input");
         const txtArea = await el.$("textarea");
-        if (!quesEl || (!txtField && !txtArea)) return;
+        if (!quesEl || (!txtField && !txtArea)) return false;
         const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase().trim());
 
         // TODO: Fill text box
 
         Utils.recordUnpreparedQuestion("TEXT", ques);
+        return true;
     }
 
     async #tryFillRadio(el: ElementHandle<Element>) {
-        const quesEl = await el.$("div.jobs-easy-apply-form-element");
+        const quesEl = await el.$("div.jobs-easy-apply-form-element legend");
         const radios = await el.$$(".fb-text-selectable__option");
-        if (!quesEl || radios.length === 0) return;
+        if (!quesEl || radios.length === 0) return false;
         const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase().trim());
 
         // TODO: Fill radio
 
         Utils.recordUnpreparedQuestion("RADIO", ques);
+        return true;
     }
 
     async #tryFillDropdown(el: ElementHandle<Element>) {
         const quesEl = await el.$("div.jobs-easy-apply-form-element");
         const select = await quesEl?.$("select");
-        if (!quesEl || !select) return;
+        if (!quesEl || !select) return false;
         const quesLabel = await quesEl.$("label");
-        if (!quesLabel) return;
+        if (!quesLabel) return false;
         const ques = await quesLabel.evaluate((el) => el.innerText.toLowerCase().trim());
 
         // TODO: Fill dropdown
 
         Utils.recordUnpreparedQuestion("DROPDOWN", ques);
+        return true;
     }
 
     async #parseJobDetails() {
