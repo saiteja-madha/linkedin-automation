@@ -6,9 +6,20 @@ import Utils from "../utils";
 
 class JobsPage extends BasePage {
     #path = "/jobs/search";
+    #technologiesByYears: Map<string, number>;
 
     constructor(browser: Browser, page: Page) {
         super(browser, page);
+        this.#technologiesByYears = new Map<string, number>();
+
+        const expConfig: { [key: number]: string[] } = config.answers.experience_years;
+        for (const year of Object.keys(expConfig)) {
+            const yearAsNumber = parseInt(year, 10);
+            const technologies = expConfig[yearAsNumber];
+            for (const technology of technologies) {
+                this.#technologiesByYears.set(technology, parseInt(year));
+            }
+        }
     }
 
     async open() {
@@ -74,6 +85,8 @@ class JobsPage extends BasePage {
         if (!ul) {
             return console.warn("Jobs Results Missing on this page!");
         }
+
+        // TODO: Pagination logic
 
         const pageJobs = await ul.$$("li");
         for (let i = 1; i <= pageJobs.length; i++) {
@@ -287,24 +300,86 @@ class JobsPage extends BasePage {
     }
 
     async #tryFillTextBox(el: ElementHandle<Element>) {
-        // TODO: This logic is not working. Radio box ques are being filled here
         const quesEl = await el.$("label");
         const txtField = await el.$("input");
         const txtArea = await el.$("textarea");
         if (!quesEl || (!txtField && !txtArea)) return false;
         const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase().trim());
 
-        // TODO: Fill text box
+        // check if text box is already filled
+        const value = txtField
+            ? await txtField?.evaluate((el) => el.value)
+            : await txtArea?.evaluate((el) => el.value);
 
-        Utils.recordUnpreparedQuestion("TEXT", ques);
+        if (value) {
+            if (config.testMode) Utils.recordUnpreparedQuestion("TEXT", ques);
+            return true;
+        }
+
+        let toEnter = "";
+        if (ques.includes("experience")) {
+            let years = null;
+            for (const [tech, y] of this.#technologiesByYears) {
+                if (ques.includes(tech.toLowerCase())) {
+                    years = y.toString();
+                    break;
+                }
+            }
+            if (!years) {
+                years = config.answers.default_experience_years.toString();
+            }
+            toEnter = years;
+        } else if (ques.includes("first name")) {
+            toEnter = config.answers.first_name;
+        } else if (ques.includes("last name")) {
+            toEnter = config.answers.last_name;
+        } else if (ques.includes("name")) {
+            toEnter = config.answers.first_name + " " + config.answers.last_name;
+        } else if (ques.includes("mobile phone")) {
+            toEnter = config.answers.phone;
+        } else if (ques.includes("website") || ques.includes("portfolio")) {
+            toEnter = config.answers.website;
+        } else if (ques.includes("linkedin")) {
+            toEnter = config.answers.linkedin;
+        } else if (ques.includes("github")) {
+            toEnter = config.answers.github;
+        } else if (ques.includes("street")) {
+            toEnter = config.answers.street_address;
+        } else if (ques.includes("city")) {
+            toEnter = config.answers.city;
+        } else if (ques.includes("state") || ques.includes("province")) {
+            toEnter = config.answers.state;
+        } else if (ques.includes("zip") || ques.includes("postal")) {
+            toEnter = config.answers.zip_code;
+        }
+
+        // TODO: Fill remaining text boxes
+
+        if (toEnter) {
+            await txtField?.type(toEnter, { delay: 1000 });
+            await txtArea?.type(toEnter, { delay: 1000 });
+            if (config.testMode) Utils.recordUnpreparedQuestion("TEXT", ques);
+        } else {
+            Utils.recordUnpreparedQuestion("TEXT", ques);
+        }
+
         return true;
     }
 
     async #tryFillRadio(el: ElementHandle<Element>) {
         const quesEl = await el.$("div.jobs-easy-apply-form-element legend");
-        const radios = await el.$$(".fb-text-selectable__option");
+        const radios = await el.$$(".fb-text-selectable__option input");
         if (!quesEl || radios.length === 0) return false;
         const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase().trim());
+
+        // check if any radio is already selected
+        for (const radio of radios) {
+            const checked = await radio.evaluate((el) => el.checked);
+            if (checked) {
+                if (config.testMode) Utils.recordUnpreparedQuestion("RADIO", ques);
+                return true;
+            }
+        }
 
         // TODO: Fill radio
 
@@ -319,6 +394,13 @@ class JobsPage extends BasePage {
         const quesLabel = await quesEl.$("label");
         if (!quesLabel) return false;
         const ques = await quesLabel.evaluate((el) => el.innerText.toLowerCase().trim());
+
+        // check if an option is already selected
+        const filled = await select.evaluate((el) => el.value);
+        if (filled) {
+            if (config.testMode) Utils.recordUnpreparedQuestion("DROPDOWN", ques);
+            return true;
+        }
 
         // TODO: Fill dropdown
 
