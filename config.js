@@ -4,7 +4,7 @@ export default {
     password: "",
 
     // Mandatory Filters
-    keyword: "Software Engineer Intern",
+    keyword: "Mulesoft Developer",
     location: "United States",
 
     // Optional Filters
@@ -14,7 +14,6 @@ export default {
 
     // Dev Options
     testMode: true, // don't submit the application, just log
-    fillAttempts: 1, // number of times to try filling out the details
     args: ["--start-maximized", "--disable-notifications"],
     headless: false,
     timeout: 30000,

@@ -1,6 +1,6 @@
 import { Browser, ElementHandle, Page } from "puppeteer";
 import BasePage from "./Base";
-import { type JobFilter } from "../../typings/index";
+import { JobDetails, type JobFilter } from "../../typings/index";
 import config from "../../config.js";
 import Utils from "../utils";
 
@@ -107,17 +107,17 @@ class JobsPage extends BasePage {
             let closeModal = false;
             // Try Apply
             try {
-                await this.#easyApply();
+                await this.#easyApply(jobDetails);
                 if (config.testMode) {
                     closeModal = true; // close modal since we are not actually applying
                     console.log("[TEST MODE]: Applied to this job");
                 } else {
                     console.log("Applied to this job");
                 }
-                Utils.writeToCSV(jobDetails, "SUCCESS");
+                Utils.recordApplicationStatus(jobDetails, "SUCCESS");
             } catch (err: any) {
                 console.log(`Failed to apply to this job. Reason: ${err.message}`);
-                Utils.writeToCSV(jobDetails, "FAILED");
+                Utils.recordApplicationStatus(jobDetails, "FAILED", err.message);
                 closeModal = true;
             }
 
@@ -129,7 +129,7 @@ class JobsPage extends BasePage {
         }
     }
 
-    async #easyApply() {
+    async #easyApply(jobDetails: JobDetails) {
         // EasyApply button
         const btn = await this.page.$("div.jobs-details__main-content button.jobs-apply-button");
         if (!btn) {
@@ -148,7 +148,6 @@ class JobsPage extends BasePage {
             console.log("No progress element found! Considering 100% progress");
         }
 
-        let fillAttempts = 0;
         let progress = progressEl ? await progressEl.evaluate((el) => el?.value) : 100;
 
         while (progress < 100) {
@@ -172,10 +171,7 @@ class JobsPage extends BasePage {
                 throw new Error("No Next/Review button found");
             }
 
-            // To log questions in test mode
-            if (config.testMode) {
-                await this.#tryFillDetails();
-            }
+            await this.#tryFillDetails(jobDetails);
 
             await button.click();
             await this.wait(2000);
@@ -186,16 +182,7 @@ class JobsPage extends BasePage {
             }
 
             if (newProgress === progress) {
-                fillAttempts++;
-                if (fillAttempts > config.fillAttempts) {
-                    throw new Error("Could not fill details");
-                }
-                console.log(
-                    `Attempting to fill the form. Attempt #${fillAttempts}/${config.fillAttempts}`
-                );
-                await this.#tryFillDetails();
-            } else {
-                fillAttempts = 0;
+                throw new Error("Could not fill details");
             }
 
             progress = newProgress;
@@ -216,7 +203,7 @@ class JobsPage extends BasePage {
         }
     }
 
-    async #tryFillDetails() {
+    async #tryFillDetails(jobDetails: JobDetails) {
         const pb4 = await this.page.$$(".jobs-easy-apply-content div.pb4");
 
         if (pb4.length === 0) {
@@ -231,7 +218,7 @@ class JobsPage extends BasePage {
             } catch (err) {}
 
             try {
-                await this.#tryFillQuestions(b4);
+                await this.#tryFillQuestions(b4, jobDetails);
             } catch (err) {}
         }
     }
@@ -269,14 +256,14 @@ class JobsPage extends BasePage {
         }
     }
 
-    async #tryFillQuestions(b4: ElementHandle<HTMLDivElement>) {
+    async #tryFillQuestions(b4: ElementHandle<HTMLDivElement>, jobDetails: JobDetails) {
         const frmEls = await b4.$$("div.jobs-easy-apply-form-section__grouping");
         let done;
 
         for (let i = 0; i < frmEls.length; i++) {
             const el = frmEls[i];
             try {
-                done = await this.#tryFillRadio(el);
+                done = await this.#tryFillRadio(el, jobDetails);
             } catch (err) {
                 console.log("Failed to fill radio", err);
             }
@@ -284,7 +271,7 @@ class JobsPage extends BasePage {
             if (done) continue;
 
             try {
-                done = await this.#tryFillDropdown(el);
+                done = await this.#tryFillDropdown(el, jobDetails);
             } catch (err) {
                 console.log("Failed to fill dropdown", err);
             }
@@ -292,14 +279,14 @@ class JobsPage extends BasePage {
             if (done) continue;
 
             try {
-                await this.#tryFillTextBox(el);
+                await this.#tryFillTextBox(el, jobDetails);
             } catch (err) {
                 console.log("Failed to fill text box", err);
             }
         }
     }
 
-    async #tryFillTextBox(el: ElementHandle<Element>) {
+    async #tryFillTextBox(el: ElementHandle<Element>, jobDetails: JobDetails) {
         const quesEl = await el.$("label");
         const txtField = await el.$("input");
         const txtArea = await el.$("textarea");
@@ -311,12 +298,9 @@ class JobsPage extends BasePage {
             ? await txtField?.evaluate((el) => el.value)
             : await txtArea?.evaluate((el) => el.value);
 
-        if (value) {
-            if (config.testMode) Utils.recordUnpreparedQuestion("TEXT", ques);
-            return true;
-        }
+        const answered = typeof value === "string" && value.length > 0;
 
-        let toEnter = "";
+        let toEnter = null;
         if (ques.includes("experience")) {
             let years = null;
             for (const [tech, y] of this.#technologiesByYears) {
@@ -355,39 +339,45 @@ class JobsPage extends BasePage {
 
         // TODO: Fill remaining text boxes
 
-        if (toEnter) {
-            await txtField?.type(toEnter, { delay: 1000 });
-            await txtArea?.type(toEnter, { delay: 1000 });
-            if (config.testMode) Utils.recordUnpreparedQuestion("TEXT", ques);
+        if (toEnter !== null) {
+            if (!answered) {
+                await txtField?.type(toEnter, { delay: 1000 });
+                await txtArea?.type(toEnter, { delay: 1000 });
+            }
+            Utils.recordPreparedQuestion(jobDetails, "TEXT", ques, toEnter);
         } else {
-            Utils.recordUnpreparedQuestion("TEXT", ques);
+            Utils.recordUnpreparedQuestion(jobDetails, "TEXT", ques);
         }
 
         return true;
     }
 
-    async #tryFillRadio(el: ElementHandle<Element>) {
+    async #tryFillRadio(el: ElementHandle<Element>, jobDetails: JobDetails) {
         const quesEl = await el.$("div.jobs-easy-apply-form-element legend");
         const radios = await el.$$(".fb-text-selectable__option input");
         if (!quesEl || radios.length === 0) return false;
         const ques = await quesEl.evaluate((el) => el.innerText.toLowerCase().trim());
 
         // check if any radio is already selected
+        let answered = false;
         for (const radio of radios) {
             const checked = await radio.evaluate((el) => el.checked);
             if (checked) {
-                if (config.testMode) Utils.recordUnpreparedQuestion("RADIO", ques);
-                return true;
+                answered = true;
+                break;
             }
         }
 
         // TODO: Fill radio
-
-        Utils.recordUnpreparedQuestion("RADIO", ques);
+        if (answered) {
+            Utils.recordPreparedQuestion(jobDetails, "RADIO", ques, "TODO");
+        } else {
+            Utils.recordUnpreparedQuestion(jobDetails, "RADIO", ques);
+        }
         return true;
     }
 
-    async #tryFillDropdown(el: ElementHandle<Element>) {
+    async #tryFillDropdown(el: ElementHandle<Element>, jobDetails: JobDetails) {
         const quesEl = await el.$("div.jobs-easy-apply-form-element");
         const select = await quesEl?.$("select");
         if (!quesEl || !select) return false;
@@ -397,14 +387,14 @@ class JobsPage extends BasePage {
 
         // check if an option is already selected
         const filled = await select.evaluate((el) => el.value);
-        if (filled) {
-            if (config.testMode) Utils.recordUnpreparedQuestion("DROPDOWN", ques);
-            return true;
+        const answered = typeof filled === "string" && filled.length > 0;
+
+        if (answered) {
+            Utils.recordPreparedQuestion(jobDetails, "DROPDOWN", ques, filled);
+        } else {
+            Utils.recordUnpreparedQuestion(jobDetails, "DROPDOWN", ques);
         }
 
-        // TODO: Fill dropdown
-
-        Utils.recordUnpreparedQuestion("DROPDOWN", ques);
         return true;
     }
 
