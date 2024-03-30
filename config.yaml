@@ -1,0 +1,20 @@
+credentials:
+  email:
+  password:
+
+search:
+  keyword: Software Engineer
+  location: United States
+  work_location: REMOTE # "ON_SITE" | "REMOTE" | "HYBRID"
+  job_type: FULL_TIME # "PART_TIME" | "FULL_TIME" | "CONTRACT" | "TEMPORARY" | "OTHER"
+  experience_level: # "INTERNSHIP" | "ENTRY_LEVEL" | "ASSOCIATE" | "MID_SENIOR" | "DIRECTOR" | "EXECUTIVE"
+
+dev:
+  test_mode: True
+  args:
+    - --start-maximized
+    - --disable-notifications
+  headless: False
+  timeout: 30000
+
+logs_dir: logs

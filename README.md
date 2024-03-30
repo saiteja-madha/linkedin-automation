@@ -1,19 +1,21 @@
 # LinkedIn Automation
 
-LinkedIn Automation is a project that utilizes [Puppeteer](https://pptr.dev/) to automate job application process on LinkedIn. This project is currently a work in progress, but it provides a basic idea of what the final product will look like.
+LinkedIn Automation is a project that utilizes [Selenium](https://www.selenium.dev/) to automate job application process on LinkedIn. This project is currently a work in progress, but it provides a basic idea of what the final product will look like.
 
 ## Getting Started
 
-To get started with this project, you will need to have [Node.js](https://nodejs.org/) installed on your system. Once Node.js is installed, you can clone this repository and run the following commands:
+To get started with this project, you will need to have [Python 3](hhttps://www.python.org/) installed on your system. Once Python is installed, you can clone this repository and run the following commands:
 
 ```bash
-npm run start
+cd linkedin-automation
+pip install -r requirements.txt
+python src/linkedin.py
 ```
 
-Before running the `npm run start` command, make sure to fill in the necessary details in the `config.js` file. Some of the fields are already filled, but you will need to fill in the following fields:
+Before running the app, make sure to fill in the necessary details in the `config.yaml` file. Some of the fields are already filled, but you will need to fill in the following fields:
 
--   email - Your LinkedIn email address
--   password - Your LinkedIn password
+- email - Your LinkedIn email address
+- password - Your LinkedIn password
 
 ## Contributing
 

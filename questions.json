@@ -1,0 +1,29 @@
+{
+    "custom": [
+        {
+            "id": "country_code",
+            "type": "dropdown",
+            "answer": "+1"
+        },
+        {
+            "id": "mobile_phone_number",
+            "type": "text",
+            "answer": ""
+        },
+        {
+            "question": "email_address",
+            "type": "dropdown",
+            "answer": ""
+        },
+        {
+            "id": "experience_years",
+            "type": "text",
+            "default": "1",
+            "answer": {
+                "1": [],
+                "2": []
+            }
+        }
+    ],
+    "additional": []
+}

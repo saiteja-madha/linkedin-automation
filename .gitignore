@@ -8,16 +8,10 @@
 Thumbs.db
 
 # Dependencies
-node_modules
+.venv
 
 # chrome directory
 userData
-
-# Build
-build
-
-# Secrets
-.env
 
 # Logs
 logs
