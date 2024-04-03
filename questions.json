@@ -1,20 +1,37 @@
 {
-    "custom": [
+    "basic": [
         {
-            "id": "country_code",
-            "type": "dropdown",
-            "answer": "+1"
-        },
-        {
-            "id": "mobile_phone_number",
+            "question": "first name",
             "type": "text",
             "answer": ""
         },
         {
-            "question": "email_address",
+            "question": "last name",
+            "type": "text",
+            "answer": ""
+        },
+        {
+            "question": "phone country code",
+            "type": "dropdown",
+            "answer": "+1"
+        },
+        {
+            "question": "mobile phone number",
+            "type": "text",
+            "answer": ""
+        },
+        {
+            "question": "email address",
             "type": "dropdown",
             "answer": ""
         },
+        {
+            "question": "city",
+            "type": "text",
+            "answer": ""
+        }
+    ],
+    "custom": [
         {
             "id": "experience_years",
             "type": "text",

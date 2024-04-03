@@ -29,6 +29,10 @@ else:
     with open(file_path, "w") as file:
         json.dump(unprepared_questions, file)
 
+def get_basic_questions(type=None):
+    if type is None:
+        return questions["basic"]
+    return list(filter(lambda q: q["type"] == type, questions["basic"]))
 
 def find_custom_question(id):
     for question in questions["custom"]:
@@ -37,8 +41,11 @@ def find_custom_question(id):
     return None
 
 
-def record_unprepared_question(job, question, type):
-    unprepared_questions.append({"job": job.job_id, "question": question, "type": type})
+def record_unprepared_question(job, question, type, options=None):
+    data = {"job": job.job_id, "question": question, "type": type}
+    if options is not None:
+        data["options"] = options
+    unprepared_questions.append(data)
     with open(file_path, "w") as file:
         json.dump(unprepared_questions, file)
 

@@ -4,6 +4,7 @@ from .Base import BasePage
 from urllib.parse import urlencode, urlparse, parse_qs
 from utils import (
     config,
+    get_basic_questions,
     find_custom_question,
     record_answered_question,
     record_unprepared_question,
@@ -153,8 +154,19 @@ class JobsPage(BasePage):
             )
             self.wait(1)
             self.current_job = JobDetails(self.driver.current_url, self.driver)
-            self.easy_apply()
-            self.wait(1)
+
+            applied = self.find_element(
+                by=By.CSS_SELECTOR,
+                value="li-icon.artdeco-inline-feedback__icon",
+                fail=False,
+            )
+
+            if applied:
+                print("Already applied to this job!")
+                record_application_status(self.current_job, "ALREADY_APPLIED")
+            else:
+                self.easy_apply()
+                self.wait(1)
 
     def easy_apply(self):
         failed = False
@@ -328,6 +340,20 @@ class JobsPage(BasePage):
 
     def try_fill_input(self, el: WebElement):
         ques_el = self.find_element(el, By.CSS_SELECTOR, "label", False)
+
+        # TODO: Verify this logic
+        if ques_el and self.find_element(ques_el, By.CSS_SELECTOR, "span[aria-hidden='true']", False) is not None:
+            ques_el = self.find_element(ques_el, By.CSS_SELECTOR, "span[aria-hidden='true']", False)
+
+        # Some don't have labels but have a preceding span
+        if not ques_el:
+            ques_el = self.find_element(
+                el,
+                By.XPATH,
+                "preceding::span[contains(@class, 'jobs-easy-apply-form-section__group-title')][1]",
+                False,
+            )
+
         text_field = self.find_element(el, By.CSS_SELECTOR, "input", False)
         text_area = self.find_element(el, By.CSS_SELECTOR, "textarea", False)
         if not ques_el or (not text_field and not text_area):
@@ -341,7 +367,7 @@ class JobsPage(BasePage):
             record_answered_question(self.current_job, ques, "TEXT", value)
         else:
             to_enter = None
-            if "work experience" in ques:
+            if "years of experience" in ques or "work experience" in ques:
                 data = find_custom_question("experience_years")["answer"]
                 for year, technologies in data.items():
                     for tech in technologies:
@@ -350,10 +376,16 @@ class JobsPage(BasePage):
                             break
 
                 if not to_enter:
-                    to_enter = find_custom_question("mobile_phone_number")["default"]
+                    to_enter = find_custom_question("experience_years")["default"]
 
-            elif "mobile phone number" in ques:
-                to_enter = find_custom_question("mobile_phone_number")["answer"]
+            # check exact match for basic questions
+            if not to_enter:
+                for question in get_basic_questions("text"):
+                    if question["question"] == ques:
+                        to_enter = question["answer"]
+                        break
+
+            # TODO: Implement logic for additional questions
 
             # Enter the value
             if to_enter:
@@ -377,17 +409,18 @@ class JobsPage(BasePage):
         ques = ques_el.text.lower()
 
         answered = False
+        options = []
         for radio in radios:
+            options.append(radio.get_attribute("value"))
             if radio.is_selected():
-                answered = True
-                break
+                answered = radio.get_attribute("value")
 
         if answered:
             # TODO: Get already answered value
-            record_answered_question(self.current_job, ques, "RADIO", "")
+            record_answered_question(self.current_job, ques, "RADIO", answered)
         else:
             # TODO: Implement logic to select a radio
-            record_unprepared_question(self.current_job, ques, "RADIO")
+            record_unprepared_question(self.current_job, ques, "RADIO", options)
 
         return True
 
@@ -397,13 +430,27 @@ class JobsPage(BasePage):
         if not ques_el or not dropdown:
             return False
         ques_label = self.find_element(ques_el, By.CSS_SELECTOR, "label span:not(.visually-hidden)", False)
-        ques = ques_label.text.lower()
 
+        # Some don't have labels but have a preceding span
+        if not ques_label:
+            ques_label = self.find_element(
+                el,
+                By.XPATH,
+                "preceding::span[contains(@class, 'jobs-easy-apply-form-section__group-title')][1]",
+                False,
+            )
+        ques = ques_label.text.lower()
         answered = dropdown.get_attribute("value") not in ["", "Select an option"]
+
+        options = []
+        for option in dropdown.find_elements(By.CSS_SELECTOR, "option"):
+            if option.get_attribute("value") not in ["", "Select an option"]:
+                options.append(option.text)
+
         if answered:
             # TODO: Get already answered value
             record_answered_question(self.current_job, ques, "DROPDOWN", dropdown.get_attribute("value"))
         else:
             # TODO: Implement logic to select a dropdown
-            record_unprepared_question(self.current_job, ques, "DROPDOWN")
+            record_unprepared_question(self.current_job, ques, "DROPDOWN", options)
         return True
