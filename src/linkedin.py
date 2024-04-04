@@ -2,6 +2,7 @@ import os
 from selenium.webdriver import ChromeOptions, Chrome
 from pages.Jobs import JobsPage
 from pages.Login import LoginPage
+from providers.answer_providers import JsonAnswerProvider
 from utils import config
 
 
@@ -19,8 +20,14 @@ browser = Chrome(options=options)
 login_page = LoginPage(browser)
 login_page.login(username=config["credentials"]["email"], password=config["credentials"]["password"])
 
+
+# Answer Provider
+file_path = os.path.join(os.path.dirname(__file__), "..", "questions.json")
+answer_provider = JsonAnswerProvider(file_path)
+
+
 # Job Search
-jobs_page = JobsPage(browser)
+jobs_page = JobsPage(browser, answer_provider)
 jobs_page.apply_filters(
     title=config["search"]["keyword"],
     location=config["search"]["location"],

@@ -18,3 +18,17 @@ dev:
   timeout: 30000
 
 logs_dir: logs
+
+basic_questions:
+  first_name: Sai Teja
+  last_name: Madha
+  phone_country_code: +1
+  mobile_phone_number: xxx-xxx-xxxx
+  email_address: xxxxxxxxx@xxx.xx
+  city: Phoenix
+  default_experience: 2
+  experience:
+    - years: 1
+      skills: ["Java"]
+    - years: 3
+      skills: ["Python", "NodeJS", "Git"]

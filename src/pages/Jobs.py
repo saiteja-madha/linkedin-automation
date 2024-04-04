@@ -2,10 +2,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from .Base import BasePage
 from urllib.parse import urlencode, urlparse, parse_qs
+from providers.answer_providers import AnswerProvider
 from utils import (
     config,
-    get_basic_questions,
-    find_custom_question,
     record_answered_question,
     record_unprepared_question,
     record_application_status,
@@ -54,9 +53,10 @@ class JobDetails:
 class JobsPage(BasePage):
     path = "/jobs/search"
 
-    def __init__(self, driver):
+    def __init__(self, driver, answer_provider: AnswerProvider) -> None:
         super().__init__(driver)
         self.current_job = None
+        self.answer_provider = answer_provider
 
     def open(self):
         self.driver.get(self.base_url + self.path)
@@ -368,24 +368,31 @@ class JobsPage(BasePage):
         else:
             to_enter = None
             if "years of experience" in ques or "work experience" in ques:
-                data = find_custom_question("experience_years")["answer"]
-                for year, technologies in data.items():
-                    for tech in technologies:
+                for experience in self.answer_provider.get_basic_answer("experience"):
+                    year = experience.get("years")
+                    skills = experience.get("skills")
+                    for tech in skills:
                         if tech in ques:
                             to_enter = year
                             break
 
                 if not to_enter:
-                    to_enter = find_custom_question("experience_years")["default"]
+                    to_enter = self.answer_provider.get_basic_answer("default_experience")
 
-            # check exact match for basic questions
+            elif ques == "first name":
+                to_enter = self.answer_provider.get_basic_answer("first_name")
+            elif ques == "last name":
+                to_enter = self.answer_provider.get_basic_answer("last_name")
+            elif ques == "mobile phone number":
+                to_enter = self.answer_provider.get_basic_answer("mobile_phone_number")
+            elif ques == "email address":
+                to_enter = self.answer_provider.get_basic_answer("email_address")
+            elif ques == "city":
+                to_enter = self.answer_provider.get_basic_answer("city")
+
+            # Additional Questions
             if not to_enter:
-                for question in get_basic_questions("text"):
-                    if question["question"] == ques:
-                        to_enter = question["answer"]
-                        break
-
-            # TODO: Implement logic for additional questions
+                to_enter = self.answer_provider.get_answer(ques)
 
             # Enter the value
             if to_enter:
