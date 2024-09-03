@@ -15,3 +15,7 @@ userData
 
 # Logs
 logs
+
+# pycache
+__pycache__
+*.pyc
